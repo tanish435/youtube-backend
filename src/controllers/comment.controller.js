@@ -2,6 +2,7 @@ import { Comment } from "../models/comment.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 
 const getVideoComments = asyncHandler(async(req, res) =>{
     const {page = 1, limit = 10} = req.query
@@ -54,7 +55,7 @@ const getVideoComments = asyncHandler(async(req, res) =>{
 })
 
 const addComment = asyncHandler(async (req, res) => { 
-    const user = req.user?._id
+    const user = new mongoose.Types.ObjectId(req.user?._id)
     const {content} = req.body
     const {videoId} = req.params
     
