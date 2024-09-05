@@ -398,7 +398,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 })
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-    console.log(mongoose.Types.ObjectId(req.user._id))
+    // console.log(new mongoose.Types.ObjectId(req.user._id))
     const user = await User.aggregate([
         {
             $match: {
