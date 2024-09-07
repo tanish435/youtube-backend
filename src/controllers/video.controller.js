@@ -2,7 +2,7 @@ import mongoose, { isValidObjectId } from "mongoose";
 import {ApiResponse} from '../utils/ApiResponse.js'
 import {ApiError} from '../utils/ApiError.js'
 import {asyncHandler} from '../utils/asyncHandler.js'
-import { deleteFileFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFileFromCloudinary, deleteVideoFileFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { Video } from "../models/video.model.js";
 
 const getAllVideos = asyncHandler(async(req, res) => {
@@ -97,7 +97,7 @@ const publishVideo = asyncHandler(async(req, res) => {
         title,
         description,
         duration: video.duration,
-        owner: mongoose.Types.ObjectId(req.user._id)
+        owner: new mongoose.Types.ObjectId(req.user._id)
     })
 
     if(!createVideo) {
@@ -116,7 +116,10 @@ const getVideoById = asyncHandler(async(req, res) => {
         throw new ApiError(400, 'Invalid video Id')
     }
 
-    const video = await Video.findById(videoId).populate("owner")
+    const video = await Video.findById(videoId).populate({
+        path: "owner",
+        select: "-password -refreshToken -watchHistory -coverImage"
+    })
 
     if(!video) {
         throw new ApiError(400, 'Unable to get requested video')
@@ -134,6 +137,10 @@ const updateVideo = asyncHandler(async(req, res) => {
 
     if(!videoId) {
         throw new ApiError(400, 'Invalid video Id')
+    }
+
+    if(title === '' || description === '') {
+        throw new ApiError(400, 'Title or description cannot be empty')
     }
 
     const oldVideo = await Video.findById(videoId)
@@ -178,12 +185,25 @@ const deleteVideo = asyncHandler(async(req, res) => {
         throw new ApiError(400, 'Invalid video Id')
     }
 
-    const deletedVideo = await Video.findByIdAndDelete(videoId)
-    if(!deletedVideo) {
-        throw new ApiError(501, 'Unable to delete video')
+    const videoToDelete = await Video.findById(videoId)
+    if(!videoToDelete) {
+        throw new ApiError(501, 'Video not found')
     }
 
-    await deleteFileFromCloudinary(deletedVideo.videoFile)
+    console.log(videoToDelete.videoFile);
+
+    try {
+        await deleteVideoFileFromCloudinary(videoToDelete.videoFile)
+        await deleteFileFromCloudinary(videoToDelete.thumbnail)
+    } catch (error) {
+        throw new ApiError(500, 'Failed to delete video or thumbnail from cloudinary')
+    }
+
+    const videoDataDeleted = await Video.deleteOne({_id: videoId})
+
+    if(videoDataDeleted.deletedCount === 0) {
+        throw new ApiError(400, 'Video data cannot be deleted')
+    }
 
     return res.
     status(200).
@@ -198,7 +218,10 @@ const togglePublishStatus = asyncHandler(async(req, res) => {
         throw new ApiError(400, 'Invalid video Id')
     }
 
-    const video = await Video.findOne({_id: videoId, owner: userId})
+    const video = await Video.findOne({
+        _id: videoId, 
+        owner: userId
+    })
 
     if(!video) {
         throw new ApiError(400, 'Video not found OR you are not authorised')

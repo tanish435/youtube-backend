@@ -54,4 +54,32 @@ const deleteFileFromCloudinary = async (fileLink) => {
     }
 }
 
-export { uploadOnCloudinary, deleteFileFromCloudinary }
+const deleteVideoFileFromCloudinary = async (videoFileLink) => {
+    try {
+        // Function to extract public ID from video URL
+        const extractVideoPublicId = (url) => {
+            const matches = url.match(/\/upload\/(?:v\d+\/)?([^\.\/]+)/);
+            return matches ? matches[1] : null;
+        };
+
+        const publicId = extractVideoPublicId(videoFileLink);
+
+        if (!publicId) {
+            throw new ApiError(400, 'Failed to extract public ID from video file URI');
+        }
+
+        // Delete the video file from Cloudinary
+        await cloudinary.uploader.destroy(publicId, { resource_type: 'video' }, (error, result) => {
+            if (error) {
+                throw new ApiError(error.message, "Failed to delete video file from Cloudinary");
+            } else {
+                console.log("Video file deleted from Cloudinary:", result);
+            }
+        });
+
+    } catch (error) {
+        throw new ApiError(500, "Failed to delete video file from Cloudinary");
+    }
+};
+
+export { uploadOnCloudinary, deleteFileFromCloudinary, deleteVideoFileFromCloudinary }
