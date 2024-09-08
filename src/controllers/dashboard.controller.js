@@ -6,7 +6,6 @@ import {User} from '../models/user.model.js'
 import {Video} from '../models/video.model.js'
 import {Subscription} from '../models/subscription.model.js'
 
-// TODO: Complete getChannelStats
 const getChannelStats = asyncHandler(async(req, res) => {
     const channelStats = await User.aggregate([
         {
@@ -16,7 +15,7 @@ const getChannelStats = asyncHandler(async(req, res) => {
         },
         {
             $lookup: {
-                from: "subscription",
+                from: "subscriptions",
                 localField: "_id",
                 foreignField: "channel",
                 as: "subscribers"
@@ -53,14 +52,14 @@ const getChannelStats = asyncHandler(async(req, res) => {
             $group: {
                 _id: "$_id",
                 totalSubscribers: {$first: {$size: "$subscribers"}},
-                totalVideos: {$sum: 1},
+                totalVideos: {$sum: {$cond: [{ $ifNull: ["$videos._id", false] }, 1, 0]}},
                 totalViews: {$sum: "$videos.views"},
                 totalLikes: {$sum: "$videos.likesCount"}
             }
         }
     ])
 
-    if(!channelStats) {
+    if (!channelStats || channelStats.length === 0) {
         throw new ApiError(500, 'Unable to fetch channel stats')
     }
 
@@ -68,6 +67,7 @@ const getChannelStats = asyncHandler(async(req, res) => {
     status(200).
     json(new ApiResponse(200, channelStats[0], "Channel Stats fetched successfully"))
 })
+
 
 const getChannelVideos = asyncHandler(async(req, res) => {
     const userId = req.user._id
@@ -77,7 +77,7 @@ const getChannelVideos = asyncHandler(async(req, res) => {
     })
 
     if(!channelVideos) {
-        throw new ApiError(400, 'No videos available')
+        throw new ApiError(400, 'Error while fetching channel videos')
     }
 
     return res.
