@@ -6,8 +6,8 @@ import mongoose from "mongoose";
 
 const getVideoComments = asyncHandler(async(req, res) =>{
     const {page = 1, limit = 10} = req.query
-    page = parseInt(page, 10)
-    limit = parseInt(limit, 10)
+    const pageParse = parseInt(page, 10)
+    const limitParse = parseInt(limit, 10)
     const {videoId} = req.params
 
     if(!videoId) {
@@ -17,7 +17,7 @@ const getVideoComments = asyncHandler(async(req, res) =>{
     const videoComments = await Comment.aggregate([
         {
             $match: {
-                video: videoId
+                video: new mongoose.Types.ObjectId(videoId)
             }
         },
         {
@@ -36,10 +36,10 @@ const getVideoComments = asyncHandler(async(req, res) =>{
             }
         }, 
         {
-            $skip: (page - 1) * limit
+            $skip: (pageParse - 1) * limitParse
         },
         {
-            $limit: limit
+            $limit: limitParse
         },
     ])
 
@@ -59,16 +59,16 @@ const addComment = asyncHandler(async (req, res) => {
     const {content} = req.body
     const {videoId} = req.params
     
-    if(!user) {
-        return new ApiError(401, "Login to add comment")
+    if(!content) {
+        throw new ApiError(400, "Content is required")
     }
     
-    if(!content) {
-        return new ApiError(400, "Content is required")
+    if(!user) {
+        throw new ApiError(401, "Login to add comment")
     }
 
     if(!videoId) {
-        return new ApiError(400, "Video id not found")
+        throw new ApiError(400, "Video id not found")
     }
 
     const comment = await Comment.create({
@@ -100,7 +100,8 @@ const updateComment = asyncHandler(async (req, res) => {
 
     const newComment = await Comment.findOneAndUpdate(
         {
-            _id: commentId
+            _id: commentId,
+            owner: new mongoose.Types.ObjectId(req.user._id)
         },
         {
             $set: {
@@ -131,6 +132,7 @@ const deleteComment = asyncHandler(async (req, res) => {
     const deletedComment = await Comment.findOneAndDelete(
         {
             _id: commentId,
+            owner: new mongoose.Types.ObjectId(req.user._id)
         }
     )
 

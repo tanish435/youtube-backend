@@ -4,9 +4,9 @@ import { addComment, deleteComment, getVideoComments, updateComment } from "../c
 
 const router = Router()
 
-router.route('/add-comment').post(verifyJWT, addComment)
+router.route('/add-comment/:videoId').post(verifyJWT, addComment)
 router.route('/update-comment/c/:commentId').patch(verifyJWT, updateComment)
-router.route('/delete-comment/c/:commentId').post(verifyJWT, deleteComment)
+router.route('/delete-comment/c/:commentId').delete(verifyJWT, deleteComment)
 router.route('/get-comments/c/:videoId').get(verifyJWT, getVideoComments)
 
 export default router
