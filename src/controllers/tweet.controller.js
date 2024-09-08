@@ -74,7 +74,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
     const deletedTweet = await Tweet.findByIdAndDelete(tweetId)
 
-    if(!deleteTweet) {
+    if(!deletedTweet) {
         throw new ApiError(500, 'Failed to delete tweet')
     }
 
