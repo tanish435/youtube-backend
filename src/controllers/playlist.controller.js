@@ -2,7 +2,7 @@ import {asyncHandler} from '../utils/asyncHandler.js';
 import {ApiResponse} from '../utils/ApiResponse.js'
 import {ApiError} from '../utils/ApiError.js'
 import { Playlist } from '../models/playlist.model.js';
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const {name, description} = req.body
@@ -13,11 +13,13 @@ const createPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Name or description are required')
     }
 
-    if(videos.length < 1) {
+    if(!videos || videos.length < 1) {
         throw new ApiError(400, 'Minimum one video is required to create playlist')
     }
 
-    const videoIds = videos.map(video => video._id)
+    const videoIds = videos.map(videoId => {
+        return new mongoose.Types.ObjectId(videoId)
+    })
 
     const playlist = await Playlist.create({
         name,
@@ -36,15 +38,21 @@ const createPlaylist = asyncHandler(async (req, res) => {
 })
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
-    const userId = req.params
+    const {userId} = req.params
     const {page = 1, limit = 10} = req.query
-    page = parseInt(page, 10)
-    limit = parseInt(limit, 10)
+    const pageParse = parseInt(page, 10)
+    const limitParse = parseInt(limit, 10)
+
+    const validUserId = new mongoose.Types.ObjectId(userId)
+
+    if(!isValidObjectId(validUserId)) {
+        throw new ApiError(400, 'User Id is not valid')
+    }
 
     const playlists = await Playlist.aggregate([
         {
             $match: {
-                owner: userId
+                owner: validUserId
             }
         },
         {
@@ -53,10 +61,10 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
             }
         },
         {
-            $skip: (page - 1) * limit
+            $skip: (pageParse - 1) * limitParse
         },
         {
-            $limit: limit
+            $limit: limitParse
         }
     ])
 
@@ -78,7 +86,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Playlist ID not found')
     }
 
-    const playlistObjectId = mongoose.Types.ObjectId(playlistId)
+    const playlistObjectId = new mongoose.Types.ObjectId(playlistId)
 
     const playlist = await Playlist.aggregate([
         {
@@ -124,8 +132,8 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Video ID is required to add') 
     }
 
-    const playlistObjectId = mongoose.Types.ObjectId(playlistId)
-    const videoObjectId = mongoose.Types.ObjectId(videoId)
+    const playlistObjectId = new mongoose.Types.ObjectId(playlistId)
+    const videoObjectId = new mongoose.Types.ObjectId(videoId)
 
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
         playlistObjectId,
@@ -154,10 +162,10 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     }
 
     const updatedPlaylist = await Playlist.findByIdAndUpdate(
-        mongoose.Types.ObjectId(playlistId),
+        new mongoose.Types.ObjectId(playlistId),
         {
             $pull: {
-                videos: mongoose.Types.ObjectId(videoId)
+                videos: new mongoose.Types.ObjectId(videoId)
             }
         },
         {new: true}
@@ -187,7 +195,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 
     return res
     .status(200)
-    .json(200, deletedPlaylist, 'Playlist deleted successfully')
+    .json(new ApiResponse(200, [], 'Playlist deleted successfully'))
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
@@ -219,7 +227,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
 
     return res
     .status(200)
-    .json(201, updatedPlaylist, 'Playlist updated successfully')
+    .json(new ApiResponse(201, updatedPlaylist, 'Playlist updated successfully'))
 })
 
 export {
