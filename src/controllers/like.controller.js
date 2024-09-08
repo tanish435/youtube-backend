@@ -3,6 +3,9 @@ import {ApiResponse} from '../utils/ApiResponse.js'
 import {ApiError} from '../utils/ApiError.js'
 import { Like } from '../models/like.model.js'
 import mongoose, { isValidObjectId } from 'mongoose'
+import { Video } from '../models/video.model.js'
+import { Comment } from '../models/comment.model.js'
+import { Tweet } from '../models/tweet.model.js'
 
 const toggleVideoLike = asyncHandler(async(req, res) => {
     const {videoId} = req.params
@@ -10,6 +13,11 @@ const toggleVideoLike = asyncHandler(async(req, res) => {
 
     if(!isValidObjectId(videoId)) {
         throw new ApiError(400, 'Invalid video ID')
+    }
+
+    const video = await Video.findById(videoId)
+    if(!video) {
+        throw new ApiError(404, 'Video not found')
     }
 
     const like = await Like.findOne({video: videoId, likedBy: userId})
@@ -49,6 +57,11 @@ const toggleCommentLike = asyncHandler(async(req, res) => {
         throw new ApiError(400, 'Invalid comment ID') 
     }
 
+    const comment = await Comment.findById(commentId)
+    if(!comment) {
+        throw new ApiError(404, 'Comment not found')
+    }
+
     const like = await Like.findOne({comment: commentId, likedBy: userId})
 
     if(like) {
@@ -83,6 +96,11 @@ const toggleTweetLike = asyncHandler(async(req, res) => {
 
     if(!isValidObjectId(tweetId)) {
         throw new ApiError(400, 'Invalid tweet id')
+    }
+
+    const tweet = await Tweet.findById(tweetId)
+    if(!tweet) {
+        throw new ApiError(404, 'Tweet not found')
     }
 
     const like = await Like.findOne({tweet: tweetId, likedBy: userId})
@@ -163,7 +181,7 @@ const getLikedVideos = asyncHandler(async(req, res) => {
                     {
                         $addFields: {
                             owner: {
-                                $arrayElemAt: ["$owner, 0"]
+                                $arrayElemAt: ["$owner", 0]
                             }
                         }
                     }
@@ -173,11 +191,11 @@ const getLikedVideos = asyncHandler(async(req, res) => {
         {
             $unwind: "$likedVideos"
         },
-        // {
-        //     $replaceRoot: {
-        //         newRoot: "$likedVideos"
-        //     }
-        // }, 
+        {
+            $replaceRoot: {
+                newRoot: "$likedVideos"
+            }
+        }, 
         {
             $sort: {createdAt: -1}
         },
