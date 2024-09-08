@@ -6,7 +6,7 @@ import { Subscription } from "../models/subscription.model.js";
 
 const toggleSubscription = asyncHandler(async(req, res) => {
     const {channelId} = req.params
-    const userId = mongoose.Types.ObjectId(req.user._id)
+    const userId = new mongoose.Types.ObjectId(req.user._id)
 
     if(!isValidObjectId(channelId)) {
         throw new ApiError(400, 'Channel Id not found')
@@ -23,7 +23,7 @@ const toggleSubscription = asyncHandler(async(req, res) => {
 
         return res.
         status(200).
-        json(201, [], 'Subscription removed successfully')
+        json(new ApiResponse(201, [], 'Subscription removed successfully'))
     } else {
         const addSubscription = await Subscription.create({
             subscriber: userId,
@@ -47,11 +47,10 @@ const getUserChannelSubscribers = asyncHandler(async(req, res) => {
     const pageParse = parseInt(page, 10)
     const limitParse = parseInt(limit, 10)
 
-    // if(channelId !== String(userId)) {
-    if(channelId !== userId) {
+    if(channelId !== String(userId)) {
         return res.
         status(403).
-        json(403, [], 'You are not authorized to get the channel subscribers')
+        json(new ApiResponse(403, [], 'You are not authorized to get the channel subscribers'))
     }
 
     if(!isValidObjectId(channelId)) {
@@ -61,7 +60,7 @@ const getUserChannelSubscribers = asyncHandler(async(req, res) => {
     const subscribers = await Subscription.aggregate([
         {
             $match: {
-                channel: mongoose.Types.ObjectId(channelId)
+                channel: new mongoose.Types.ObjectId(channelId)
             }
         },
         {
@@ -131,7 +130,7 @@ const getSubscribedChannels = asyncHandler(async(req, res) => {
     const subscribedChannels = await Subscription.aggregate([
         {
             $match: {
-                subscriber: mongoose.Types.ObjectId(subscriberId)
+                subscriber: new mongoose.Types.ObjectId(subscriberId)
             }
         },
         {

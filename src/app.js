@@ -33,7 +33,7 @@ app.use("/api/v1/healthcheck", healthcheckRouter)
 app.use("/api/v1/tweets", tweetRouter)
 app.use("/api/v1/playlists", playlistRouter)
 app.use("/api/v1/like", likeRouter)
-app.use("api/v1/subscription", subscriptionRouter)
+app.use("/api/v1/subscription", subscriptionRouter)
 app.use("/api/v1/video", videoRouter)
 app.use("/api/v1/dashboard", dashboardRouter)
 // http://localhost:8080/api/v1/users/register
